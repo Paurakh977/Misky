@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Parakeet ASR</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #080a0f;
+        --surface: #0d1018;
+        --border: #1c2235;
+        --border-hi: #2a3555;
+        --green: #76b900;
+        --green-dim: #3d6100;
+        --red: #ff3a3a;
+        --red-dim: #7a1010;
+        --text: #c8d4e8;
+        --muted: #4a5a78;
+        --mono: "Space Mono", monospace;
+        --display: "Syne", sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--mono);
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        overflow-x: hidden;
+      }
+
+      /* ── scanline overlay ── */
+      body::before {
+        content: "";
+        pointer-events: none;
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.07) 2px,
+          rgba(0, 0, 0, 0.07) 4px
+        );
+        z-index: 9999;
+      }
+
+      /* ── HEADER ── */
+      header {
+        border-bottom: 1px solid var(--border);
+        padding: 20px 32px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .logo-mark {
+        width: 36px;
+        height: 36px;
+        border: 2px solid var(--green);
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+
+      .logo-text {
+        font-family: var(--display);
+        font-size: 1.3rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: #fff;
+      }
+
+      .logo-text span {
+        color: var(--green);
+      }
+
+      .badge {
+        margin-left: auto;
+        font-size: 0.68rem;
+        padding: 4px 10px;
+        border: 1px solid var(--green-dim);
+        border-radius: 4px;
+        color: var(--green);
+        letter-spacing: 0.08em;
+      }
+
+      /* ── MAIN ── */
+      main {
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        gap: 0;
+        max-width: 1100px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 40px 32px;
+        align-items: start;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* ── LEFT PANEL ── */
+      .panel-left {
+        padding-right: 40px;
+      }
+
+      .section-label {
+        font-size: 0.68rem;
+        letter-spacing: 0.15em;
+        color: var(--muted);
+        text-transform: uppercase;
+        margin-bottom: 14px;
+      }
+
+      /* ── BIG RECORD BUTTON ── */
+      #recordBtn {
+        position: relative;
+        width: 100%;
+        padding: 28px 32px;
+        background: transparent;
+        border: 1px solid var(--border-hi);
+        border-radius: 10px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        transition:
+          border-color 0.2s,
+          background 0.2s;
+        margin-bottom: 24px;
+        overflow: hidden;
+      }
+
+      #recordBtn::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(118, 185, 0, 0.04),
+          transparent
+        );
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      #recordBtn:hover {
+        border-color: var(--green);
+      }
+      #recordBtn:hover::before {
+        opacity: 1;
+      }
+
+      #recordBtn.recording {
+        border-color: var(--red);
+        animation: border-pulse 1.4s infinite;
+      }
+      #recordBtn.recording::before {
+        background: linear-gradient(
+          135deg,
+          rgba(255, 58, 58, 0.04),
+          transparent
+        );
+        opacity: 1;
+      }
+
+      @keyframes border-pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(255, 58, 58, 0.25);
+        }
+        50% {
+          box-shadow: 0 0 0 8px rgba(255, 58, 58, 0);
+        }
+      }
+
+      .btn-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: var(--green);
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        transition:
+          background 0.2s,
+          transform 0.15s;
+      }
+
+      #recordBtn.recording .btn-icon {
+        background: var(--red);
+        animation: icon-breathe 1.4s infinite;
+      }
+
+      @keyframes icon-breathe {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.08);
+        }
+      }
+
+      .btn-icon svg {
+        width: 22px;
+        height: 22px;
+        fill: #0d1018;
+      }
+
+      .btn-text {
+        text-align: left;
+      }
+      .btn-title {
+        font-family: var(--display);
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #fff;
+        display: block;
+      }
+      .btn-sub {
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin-top: 3px;
+        display: block;
+      }
+
+      .timer-chip {
+        margin-left: auto;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--red);
+        opacity: 0;
+        transition: opacity 0.3s;
+        flex-shrink: 0;
+      }
+      #recordBtn.recording .timer-chip {
+        opacity: 1;
+      }
+
+      /* ── WAVEFORM ── */
+      .wave-box {
+        height: 56px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 24px;
+        position: relative;
+      }
+
+      .wave-box canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .wave-idle {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.72rem;
+        color: var(--muted);
+        letter-spacing: 0.1em;
+      }
+
+      /* ── STATUS ── */
+      #statusLine {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin-bottom: 20px;
+        min-height: 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      #statusLine .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--muted);
+        flex-shrink: 0;
+      }
+      #statusLine.ok .dot {
+        background: var(--green);
+      }
+      #statusLine.busy .dot {
+        background: #facc15;
+        animation: blink 0.7s infinite;
+      }
+      #statusLine.err .dot {
+        background: var(--red);
+      }
+
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.2;
+        }
+      }
+
+      .gpu-label { font-size:.65rem; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:4px; }
+      .gpu-val   { font-size:.9rem; color:var(--text); font-weight:700; }
+      .gpu-bar-wrap { margin-top:6px; height:4px; background:var(--border); border-radius:4px; overflow:hidden; }
+      .gpu-bar      { height:100%; background:var(--red); border-radius:4px; width:0%; transition:width .6s; }
+      .gpu-bar.green{ background:var(--green); }
+
+
+      /* ── TRANSCRIPT OUTPUT ── */
+      .out-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      #copyBtn {
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        border: 1px solid var(--border-hi);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font-family: var(--mono);
+        transition:
+          color 0.2s,
+          border-color 0.2s;
+      }
+      #copyBtn:hover {
+        color: var(--green);
+        border-color: var(--green);
+      }
+
+      #transcriptOut {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 20px;
+        min-height: 120px;
+        font-size: 0.9rem;
+        line-height: 1.75;
+        color: var(--text);
+        white-space: pre-wrap;
+        word-break: break-word;
+        transition: border-color 0.3s;
+      }
+
+      #transcriptOut.has-text {
+        border-color: var(--green-dim);
+      }
+
+      #transcriptOut:empty::before {
+        content: "Transcription output…";
+        color: var(--muted);
+        font-style: italic;
+      }
+
+      /* ── RIGHT PANEL — HISTORY ── */
+      .panel-right {
+        border-left: 1px solid var(--border);
+        padding-left: 32px;
+      }
+
+      .history-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+
+      #clearBtn {
+        font-size: 0.68rem;
+        padding: 3px 8px;
+        border: 1px solid var(--border-hi);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font-family: var(--mono);
+        letter-spacing: 0.05em;
+      }
+      #clearBtn:hover {
+        color: var(--red);
+        border-color: var(--red-dim);
+      }
+
+      #historyList {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 560px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-hi) transparent;
+      }
+
+      #historyList li {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 14px;
+        animation: slide-in 0.25s ease;
+      }
+
+      @keyframes slide-in {
+        from {
+          opacity: 0;
+          transform: translateX(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      #historyList li .h-ts {
+        font-size: 0.65rem;
+        color: var(--muted);
+        margin-bottom: 5px;
+        letter-spacing: 0.06em;
+      }
+
+      #historyList li .h-txt {
+        font-size: 0.8rem;
+        color: var(--text);
+        line-height: 1.55;
+      }
+
+      .empty-hist {
+        font-size: 0.75rem;
+        color: var(--muted);
+        text-align: center;
+        padding: 30px 0;
+        letter-spacing: 0.05em;
+      }
+
+      /* ── FOOTER ── */
+      footer {
+        border-top: 1px solid var(--border);
+        padding: 14px 32px;
+        font-size: 0.68rem;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+      }
+
+      footer span {
+        letter-spacing: 0.06em;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo-mark">🦜</div>
+      <div>
+        <div class="logo-text">Parakeet<span>ASR</span></div>
+      </div>
+      <div class="badge">RTX 4050 · CUDA · FP16</div>
+    </header>
+
+    <main>
+      <!-- ── LEFT ── -->
+      <div class="panel-left">
+        <p class="section-label">Input</p>
+
+        <button id="recordBtn">
+          <div class="btn-icon">
+            <!-- mic icon -->
+            <svg
+              id="iconMic"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-6 11a6 6 0 0 0 12 0h2a8 8 0 0 1-7 7.938V22h-2v-2.062A8 8 0 0 1 4 12h2z"
+              />
+            </svg>
+            <!-- stop icon (hidden) -->
+            <svg
+              id="iconStop"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+              style="display: none"
+            >
+              <rect x="5" y="5" width="14" height="14" rx="2" />
+            </svg>
+          </div>
+          <div class="btn-text">
+            <span class="btn-title" id="btnTitle">Start Recording</span>
+            <span class="btn-sub" id="btnSub"
+              >Click to begin — mic access required</span
+            >
+          </div>
+          <span class="timer-chip" id="timerChip">0:00</span>
+        </button>
+
+        <div class="wave-box">
+          <canvas id="waveCanvas"></canvas>
+          <div class="wave-idle" id="waveIdle">AWAITING SIGNAL</div>
+        </div>
+
+        <div id="statusLine">
+          <div class="dot"></div>
+          <span id="statusText">Ready</span>
+        </div>
+
+        <div class="out-label">
+          <p class="section-label" style="margin: 0">Output</p>
+          <button id="copyBtn">copy</button>
+        </div>
+
+        <div id="transcriptOut"></div>
+
+        <!-- ── GPU Monitor ── -->
+        <div style="margin-top: 28px">
+          <div class="out-label">
+            <p class="section-label" style="margin: 0">GPU Monitor</p>
+            <span
+              id="gpuRefreshBadge"
+              style="font-size: 0.68rem; color: var(--muted)"
+              >live · 2s</span
+            >
+          </div>
+          <div
+            id="gpuPanel"
+            style="
+              background: var(--surface);
+              border: 1px solid var(--border);
+              border-radius: 10px;
+              padding: 18px 20px;
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 14px 24px;
+            "
+          >
+            <div class="gpu-stat">
+              <div class="gpu-label">GPU Name</div>
+              <div class="gpu-val" id="gName">—</div>
+            </div>
+            <div class="gpu-stat">
+              <div class="gpu-label">Temperature</div>
+              <div class="gpu-val" id="gTemp">—</div>
+            </div>
+            <div class="gpu-stat">
+              <div class="gpu-label">GPU Utilisation</div>
+              <div class="gpu-val" id="gUtil">—</div>
+              <div class="gpu-bar-wrap">
+                <div class="gpu-bar" id="gUtilBar"></div>
+              </div>
+            </div>
+            <div class="gpu-stat">
+              <div class="gpu-label">VRAM Used / Total</div>
+              <div class="gpu-val" id="gVram">—</div>
+              <div class="gpu-bar-wrap">
+                <div class="gpu-bar green" id="gVramBar"></div>
+              </div>
+            </div>
+            <div class="gpu-stat">
+              <div class="gpu-label">Torch Allocated</div>
+              <div class="gpu-val" id="gAlloc">—</div>
+            </div>
+            <div class="gpu-stat">
+              <div class="gpu-label">Torch Reserved</div>
+              <div class="gpu-val" id="gReserved">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── RIGHT ── -->
+      <div class="panel-right">
+        <div class="history-header">
+          <p class="section-label" style="margin: 0">Session Log</p>
+          <button id="clearBtn">clear</button>
+        </div>
+        <ul id="historyList">
+          <li class="empty-hist" id="emptyHint">No recordings yet</li>
+        </ul>
+      </div>
+    </main>
+
+    <footer>
+      <span>nvidia/parakeet-tdt-0.6b-v2</span>
+      <span>transcriptions saved → transcriptions.txt</span>
+    </footer>
+
+    <script>
+      // ── DOM refs ────────────────────────────────────────────────────────────────
+      const recordBtn = document.getElementById("recordBtn");
+      const btnTitle = document.getElementById("btnTitle");
+      const btnSub = document.getElementById("btnSub");
+      const iconMic = document.getElementById("iconMic");
+      const iconStop = document.getElementById("iconStop");
+      const timerChip = document.getElementById("timerChip");
+      const waveCanvas = document.getElementById("waveCanvas");
+      const waveIdle = document.getElementById("waveIdle");
+      const statusLine = document.getElementById("statusLine");
+      const statusText = document.getElementById("statusText");
+      const transcriptOut = document.getElementById("transcriptOut");
+      const copyBtn = document.getElementById("copyBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const historyList = document.getElementById("historyList");
+      const emptyHint = document.getElementById("emptyHint");
+      const ctx2d = waveCanvas.getContext("2d");
+
+      // ── State ────────────────────────────────────────────────────────────────────
+      let mediaRecorder,
+        audioChunks = [],
+        stream;
+      let recording = false;
+      let timerInterval,
+        timerSecs = 0;
+      let animId, analyser, dataArr;
+
+      // ── Button ───────────────────────────────────────────────────────────────────
+      recordBtn.addEventListener("click", () =>
+        recording ? stopRec() : startRec(),
+      );
+
+      // ── Start ────────────────────────────────────────────────────────────────────
+      async function startRec() {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (e) {
+          setStatus("Microphone denied: " + e.message, "err");
+          return;
+        }
+
+        // waveform
+        const audioCtx = new AudioContext();
+        const src = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 512;
+        src.connect(analyser);
+        dataArr = new Uint8Array(analyser.frequencyBinCount);
+        waveIdle.style.display = "none";
+        drawWave();
+
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+        mediaRecorder.start();
+
+        recording = true;
+        recordBtn.classList.add("recording");
+        iconMic.style.display = "none";
+        iconStop.style.display = "block";
+        btnTitle.textContent = "Recording…";
+        btnSub.textContent = "Click to stop and transcribe";
+        transcriptOut.textContent = "";
+        transcriptOut.classList.remove("has-text");
+        setStatus("Recording in progress", "busy");
+
+        timerSecs = 0;
+        timerChip.textContent = "0:00";
+        timerInterval = setInterval(() => {
+          timerChip.textContent = fmt(++timerSecs);
+        }, 1000);
+      }
+
+      // ── Stop ─────────────────────────────────────────────────────────────────────
+      function stopRec() {
+        recording = false;
+        clearInterval(timerInterval);
+        cancelAnimationFrame(animId);
+        waveIdle.style.display = "flex";
+
+        recordBtn.classList.remove("recording");
+        iconMic.style.display = "block";
+        iconStop.style.display = "none";
+        btnTitle.textContent = "Start Recording";
+        btnSub.textContent = "Click to begin — mic access required";
+        setStatus("Transcribing…", "busy");
+
+        mediaRecorder.onstop = async () => {
+          stream.getTracks().forEach((t) => t.stop());
+          const blob = new Blob(audioChunks, { type: "audio/webm" });
+          const b64 = await toB64(blob);
+          await transcribe(b64);
+        };
+        mediaRecorder.stop();
+      }
+
+      // ── Transcribe ────────────────────────────────────────────────────────────────
+      async function transcribe(b64) {
+        try {
+          const res = await fetch("/transcribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ audio: b64 }),
+          });
+          const data = await res.json();
+          if (data.error) {
+            setStatus(data.error, "err");
+            return;
+          }
+
+          transcriptOut.textContent = data.text;
+          transcriptOut.classList.add("has-text");
+          setStatus("Transcription complete", "ok");
+          addHistory(data.text);
+        } catch (e) {
+          setStatus("Server error: " + e.message, "err");
+        }
+      }
+
+      // ── Waveform ──────────────────────────────────────────────────────────────────
+      function drawWave() {
+        animId = requestAnimationFrame(drawWave);
+        analyser.getByteTimeDomainData(dataArr);
+
+        const W = waveCanvas.offsetWidth;
+        const H = waveCanvas.offsetHeight;
+        waveCanvas.width = W;
+        waveCanvas.height = H;
+
+        ctx2d.clearRect(0, 0, W, H);
+
+        // gradient line
+        const grad = ctx2d.createLinearGradient(0, 0, W, 0);
+        grad.addColorStop(0, "rgba(255,58,58,0)");
+        grad.addColorStop(0.2, "#ff3a3a");
+        grad.addColorStop(0.8, "#ff3a3a");
+        grad.addColorStop(1, "rgba(255,58,58,0)");
+
+        ctx2d.lineWidth = 2;
+        ctx2d.strokeStyle = grad;
+        ctx2d.beginPath();
+
+        const step = W / dataArr.length;
+        let x = 0;
+        for (let i = 0; i < dataArr.length; i++) {
+          const y = (dataArr[i] / 128) * (H / 2);
+          i === 0 ? ctx2d.moveTo(x, y) : ctx2d.lineTo(x, y);
+          x += step;
+        }
+        ctx2d.stroke();
+      }
+
+      // ── Helpers ───────────────────────────────────────────────────────────────────
+      function toB64(blob) {
+        return new Promise((res) => {
+          const r = new FileReader();
+          r.onloadend = () => res(r.result.split(",")[1]);
+          r.readAsDataURL(blob);
+        });
+      }
+
+      function fmt(s) {
+        return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+      }
+
+      function setStatus(msg, type = "") {
+        statusText.textContent = msg;
+        statusLine.className = type;
+        // re-add dot
+        if (!statusLine.querySelector(".dot")) {
+          const d = document.createElement("div");
+          d.className = "dot";
+          statusLine.prepend(d);
+        }
+      }
+
+      function addHistory(text) {
+        emptyHint && emptyHint.remove();
+        const li = document.createElement("li");
+        const now = new Date();
+        const ts = now.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        li.innerHTML = `<div class="h-ts">${ts}</div><div class="h-txt">${text}</div>`;
+        historyList.prepend(li);
+      }
+
+      copyBtn.addEventListener("click", () => {
+        if (!transcriptOut.textContent) return;
+        navigator.clipboard.writeText(transcriptOut.textContent);
+        copyBtn.textContent = "copied!";
+        setTimeout(() => (copyBtn.textContent = "copy"), 1800);
+      });
+
+      clearBtn.addEventListener("click", () => {
+        historyList.innerHTML =
+          '<li class="empty-hist" id="emptyHint">No recordings yet</li>';
+      });
+
+
+      // ── GPU polling ────────────────────────────────────────────────────────────
+    async function pollGPU() {
+      try {
+        const r = await fetch('/gpu');
+        const d = await r.json();
+        document.getElementById('gName').textContent     = d.name;
+        document.getElementById('gTemp').textContent     = d.temp_c + ' °C';
+        document.getElementById('gUtil').textContent     = d.gpu_util_pct + ' %';
+        document.getElementById('gUtilBar').style.width  = d.gpu_util_pct + '%';
+        document.getElementById('gVram').textContent     = 
+          Math.round(d.mem_used_mb) + ' MB / ' + Math.round(d.mem_total_mb) + ' MB';
+        document.getElementById('gVramBar').style.width  = 
+          (d.mem_used_mb / d.mem_total_mb * 100).toFixed(1) + '%';
+        document.getElementById('gAlloc').textContent    = Math.round(d.torch_alloc_mb) + ' MB';
+        document.getElementById('gReserved').textContent = Math.round(d.torch_reserved_mb) + ' MB';
+      } catch(e) { /* server not ready yet */ }
+    }
+    pollGPU();
+    setInterval(pollGPU, 2000);
+    </script>
+  </body>
+</html>
