@@ -1,0 +1,30 @@
+[project]
+name = "test"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "nemo-toolkit[asr]>=2.7.1",
+    "flask>=3.0.0",
+    "torch>=2.7.1",
+    "torchvision>=0.22.1",
+    "torchaudio>=2.7.1",
+    "fastapi>=0.135.1",
+    "uvicorn[standard]>=0.42.0",
+    "python-multipart>=0.0.22",
+    "pynvml>=13.0.1",
+    "nvidia-ml-py>=13.595.45",
+    "websockets>=16.0",
+    "faster-whisper>=1.2.1",
+]
+
+[[tool.uv.index]]
+url = "https://download.pytorch.org/whl/cu126"
+name = "pytorch-cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu126" }]
+torchvision = [{ index = "pytorch-cu126" }]
+torchaudio = [{ index = "pytorch-cu126" }]
