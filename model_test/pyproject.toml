@@ -17,6 +17,8 @@ dependencies = [
     "nvidia-ml-py>=13.595.45",
     "websockets>=16.0",
     "faster-whisper>=1.2.1",
+    "llama-cpp-python>=0.3.18",
+
 ]
 
 [[tool.uv.index]]
