@@ -26,7 +26,14 @@ url = "https://download.pytorch.org/whl/cu126"
 name = "pytorch-cu126"
 explicit = true
 
+[[tool.uv.index]]
+url = "https://abetlen.github.io/llama-cpp-python/whl/cpu"
+name = "llama-cpp-python-cpu"
+explicit = true
+
+
 [tool.uv.sources]
 torch = [{ index = "pytorch-cu126" }]
 torchvision = [{ index = "pytorch-cu126" }]
 torchaudio = [{ index = "pytorch-cu126" }]
+llama-cpp-python = [{ index = "llama-cpp-python-cpu" }]
