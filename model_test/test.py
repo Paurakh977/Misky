@@ -9,6 +9,7 @@ model_path = hf_hub_download(
 )
 # repo_id="LiquidAI/LFM2.5-VL-1.6B-GGUF",
 # 	filename="LFM2.5-VL-1.6B-BF16.gguf",
+
 llm = Llama(
     model_path=model_path,
     n_gpu_layers=0,
