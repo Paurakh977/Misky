@@ -25,8 +25,9 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-LLAMA_DIR = Path(r"C:\Users\V16\Downloads\llama-b8533-bin-win-cpu-x64")
-LLAMA_SERVER = LLAMA_DIR / "llama-server.exe"
+# LLAMA_DIR = Path(r"C:\Users\V16\Downloads\llama-b8533-bin-win-cpu-x64")
+LLAMA_SERVER = Path(r"C:\Users\V16\AppData\Local\Microsoft\WinGet\Packages\ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe\llama-server.exe")
+# LLAMA_SERVER = LLAMA_DIR / "llama-server.exe"
 
 MODEL_HF = "LiquidAI/LFM2.5-VL-1.6B-GGUF:Q4_0"
 LLAMA_PORT = 8181
